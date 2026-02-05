@@ -1,0 +1,7 @@
+qdrant_client==1.14.2
+langchain-huggingface
+langchain-experimental
+qdrant-client
+sentence-transformers
+langchain_openai
+langchain_groq
