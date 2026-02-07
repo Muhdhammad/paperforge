@@ -7,16 +7,15 @@ class RAG:
         self.retriever = retriever
         self.top_k = top_k
         self.llm_name = llm_name
-        self.llm = self._setup_llm()
         self.provider = provider
+        self.llm = self._setup_llm()
         self.prompt_template_str = self.prompt_template()
 
     def _setup_llm(self):
         
         if self.provider == "OPENAI":
             llm =  ChatOpenAI(
-                name=self.llm_name,
-                api_key=CONFIG.OPENAI_API_KEY,
+                model=self.llm_name,
                 max_completion_tokens=1024,
                 temperature=0.1
             )
@@ -45,6 +44,8 @@ class RAG:
     - Use only the information from the context above
     - Be specific: cite numbers, percentages, method names, or results when relevant
     - Use technical language appropriately for a research audience
+    - Do not rephrase unless necessary; prefer wording from the context.
+
 
     2. IF INFORMATION IS MISSING:
     - State clearly: "The provided context does not contain information about [topic]."
@@ -73,6 +74,7 @@ class RAG:
         contexts = self.generate_context(query=query)
         prompt = self.prompt_template_str.format(context=contexts, query=query)
         response = self.llm.invoke(prompt)
-        return response
+        return response.content
+
 
 
