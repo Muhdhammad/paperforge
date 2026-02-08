@@ -5,3 +5,5 @@ qdrant-client
 sentence-transformers
 langchain_openai
 langchain_groq
+docling
+easyocr
