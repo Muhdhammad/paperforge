@@ -1,7 +1,6 @@
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions, TesseractOcrOptions, AcceleratorDevice, AcceleratorOptions, PictureDescriptionApiOptions
-from docling.datamodel.pipeline_options import EasyOcrOptions  
+from docling.datamodel.pipeline_options import PdfPipelineOptions, EasyOcrOptions, TableStructureOptions, AcceleratorDevice, AcceleratorOptions, PictureDescriptionApiOptions
 import re
 import logging
 from pathlib import Path
@@ -40,14 +39,15 @@ def picture_description(model: str = "gpt-4.1-nano", max_tokens: int = 200, temp
          logger.error(f"Failed to create PictureDescriptionApiOptions: {str(e)}")
          return None
 
-def pdf_pipeline_options(picture_desc_option, cuda: bool = False):
+def pdf_pipeline_options(cuda: bool = False):
      
    pipeline_options = PdfPipelineOptions(
       do_ocr=True,
       do_table_structure=True,
+      table_structure_options=TableStructureOptions(do_cell_matching=True),
       do_formula_enrichment=True,
-      do_picture_description=True,
-      picture_description_options=picture_desc_option,
+      do_picture_description=False,
+      #picture_description_options=picture_desc_option,
       generate_picture_images=True,
       generate_page_images=True,
       images_scale=2,
@@ -60,12 +60,7 @@ def pdf_pipeline_options(picture_desc_option, cuda: bool = False):
    
    return pipeline_options
 
-def convert_pdf_to_markdown(pipeline_options, pdf_path: str):
-   format_options = {
-      InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
-   }
-
-   converter = DocumentConverter(format_options=format_options)
+def convert_pdf_to_markdown(converter: DocumentConverter, pdf_path: str):
    result = converter.convert(str(pdf_path))
    markdown_text = result.document.export_to_markdown(image_mode="embedded")
    return markdown_text
@@ -87,8 +82,13 @@ def process_pdfs(input_path: Path, output_path: Path, model: str ="gpt-4-turbo",
     
     output_path.mkdir(parents=True, exist_ok=True)
 
-    picture_desc = picture_description(model=model)
-    pipeline_options = pdf_pipeline_options(picture_desc_option=picture_desc, cuda=cuda)
+    #picture_desc = picture_description(model=model)
+    pipeline_options = pdf_pipeline_options(cuda=cuda)
+    format_options = {
+       InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+    }
+
+    converter = DocumentConverter(format_options=format_options)
 
     outputs = []
 
@@ -97,10 +97,15 @@ def process_pdfs(input_path: Path, output_path: Path, model: str ="gpt-4-turbo",
         start_time = time.perf_counter()
         
         try:
-            markdown_text = convert_pdf_to_markdown(pipeline_options=pipeline_options, pdf_path=pdf_file)
+            markdown_text = convert_pdf_to_markdown(converter=converter, pdf_path=pdf_file)
             cleaned_md_text = remove_base64_images(markdown_text=markdown_text)
 
-            output_file = output_path / f"{pdf_file.stem}_numthreads.md"
+            output_file = output_path / f"{pdf_file.stem}.md"
+            if output_file.exists():
+               logger.info(f"Skipping {pdf_file.name} - already done")
+               outputs.append(output_file)
+               continue
+
             output_file.write_text(cleaned_md_text, encoding="utf-8")
             outputs.append(output_file)
             elapsed_time = time.perf_counter() - start_time
