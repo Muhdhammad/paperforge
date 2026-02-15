@@ -1,6 +1,7 @@
 from qdrant_client import QdrantClient, models
 from embedding import Embedding
 from tqdm import tqdm
+from utils import get_uuid
 
 class CollectionAlreadyExists(Exception):
     pass
@@ -12,7 +13,7 @@ class UploadError(Exception):
     pass
 
 class QdrantVDB:
-    def __init__(self, collection_name: str, vector_dim: int = 384):
+    def __init__(self, collection_name: str, vector_dim: int = 768):
         self.collection_name = collection_name
         self.vector_dim = vector_dim
         self.client = QdrantClient(
@@ -51,7 +52,7 @@ class QdrantVDB:
                               desc="Uploading batches to Qdrant"):
 
                 points = [models.PointStruct(  # Qdrant expects a list of points
-                    id=doc["payload"]["doc_id"],
+                    id=get_uuid(),
                     vector=doc["vector"],
                     payload=doc["payload"]
                 ) for doc in batch
