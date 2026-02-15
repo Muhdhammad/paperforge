@@ -6,7 +6,7 @@ class Embedding:
 
     def __init__(
         self,
-        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+        model_name: str = "nomic-ai/nomic-embed-text-v1.5",
         batch_size: int = 4,
         device: str = "cpu", # "cuda" if gpu
         cache_folder: str = "./hf_cache"
@@ -22,8 +22,11 @@ class Embedding:
     def _load_model(self):
         return HuggingFaceEmbeddings(
             model_name=self.model_name,
-            model_kwargs={"device": self.device},
-            encode_kwargs={"batch_size": self.batch_size},
+            model_kwargs={"device": self.device,
+                          "trust_remote_code": True},
+            encode_kwargs={"batch_size": self.batch_size,
+                           "normalize_embeddings": True,
+                           "truncate_dim": 768},
             cache_folder=self.cache_folder
         ) 
     
