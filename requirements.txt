@@ -8,3 +8,6 @@ langchain_groq
 docling
 easyocr
 einops
+huggingface_hub
+datasets
+ragas
