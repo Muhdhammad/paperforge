@@ -16,10 +16,7 @@ class SemanticChunking:
             breakpoint_threshold_type="percentile",
             breakpoint_threshold_amount=breakpoint_threshold,
         )
-    
-    def get_uuid():
-        return str(uuid.uuid4())
-
+        
     def create_chunks(
         self,
         markdown_text: str,
