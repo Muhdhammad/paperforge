@@ -1,21 +1,38 @@
 from langchain_experimental.text_splitter import SemanticChunker
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_core.documents import Document
 import uuid
 
 
-class SemanticChunking:
+class MarkdownChunking:
     def __init__(
         self,
-        embeddings,
+        embed_model,
+        chunker: str = "semantic",
         breakpoint_threshold: int = 85,
         min_chunk_size: int = 50,
     ):
+        self.chunker_type = chunker
         self.min_chunk_size = min_chunk_size
-        self.chunker = SemanticChunker(
-            embeddings=embeddings,
-            breakpoint_threshold_type="percentile",
-            breakpoint_threshold_amount=breakpoint_threshold,
-        )
+        if self.chunker_type == "semantic":
+            self.chunker = SemanticChunker(
+                embeddings=embed_model,
+                breakpoint_threshold_type="percentile",
+                breakpoint_threshold_amount=breakpoint_threshold,
+            )
+
+        elif self.chunker_type == "heading":
+            self.chunker = MarkdownHeaderTextSplitter(
+                headers_to_split_on=[
+                    ("#", "Header 1"),
+                    ("#", "Header 2"),
+                    ("#", "Header 3")
+                ],
+            )
+    
+        else:
+            raise ValueError(f"Unknown chunker {self.chunker_type}, use 'semantic' or 'heading" )
+
         
     def create_chunks(
         self,
@@ -23,9 +40,12 @@ class SemanticChunking:
         doc_id: str,
         file_name: str,
     ) -> list[Document]:
-
-        raw_chunks = self.chunker.create_documents([markdown_text])
-        chunks = self._merge_chunks(raw_chunks)
+        
+        if self.chunker_type == "semantic":
+            raw_chunks = self.chunker.create_documents([markdown_text])
+            chunks = self._merge_chunks(raw_chunks)
+        else:
+            chunks = self.chunker_type.create_documents([markdown_text])
 
         for idx, chunk in enumerate(chunks):
             chunk.metadata.update({
@@ -64,4 +84,5 @@ class SemanticChunking:
                 merged_chunks.append(Document(page_content=buffer))
 
         return merged_chunks
+
 
