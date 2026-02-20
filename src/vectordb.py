@@ -6,6 +6,9 @@ from utils import get_uuid
 class CollectionAlreadyExists(Exception):
     pass
 
+class CollectionDoesntExist(Exception):
+    pass
+
 class CollectionCreationError(Exception):
     pass
 
@@ -65,3 +68,40 @@ class QdrantVDB:
 
         except Exception as e:
             raise UploadError(f"Failed to upload documents to Qdrant") from e
+        
+    def check_health(self):
+
+        if not self.client.collection_exists(collection_name=self.collection_name):
+            raise CollectionDoesntExist(f"No collection exists {self.collection_name}")
+
+        broken_points = 0
+        offset = None
+        batch_num = 0
+        total_points = self.client.count(collection_name=self.collection_name).count
+        print(f"Total points: {total_points}")
+
+        while True:
+            points, offset = self.client.scroll(collection_name=self.collection_name,
+                                                limit=100,
+                                                offset=offset)
+            if not points:
+                break
+            
+            batch_num +=1
+            for p in points:
+                if not p.payload:
+                    broken_points += 1 
+            print(f"Batch {batch_num}: processed {batch_num * 100}, broken so far: {broken_points}")
+
+            if offset is None:
+                break
+
+        print(f"Total broken points without payload: {broken_points}")
+
+
+
+if __name__ == "__main__":
+    qdrantvdb = QdrantVDB(collection_name="research-papers")
+    qdrantvdb.check_health()
+
+        
