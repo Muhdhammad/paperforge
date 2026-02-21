@@ -59,14 +59,14 @@ def ingest_markdown_to_qdrant(input_path: Path):
         raise
 
     try:
-        qdrantvdb = QdrantVDB(collection_name="research-papers", vector_dim=768)
+        qdrantvdb = QdrantVDB(collection_name="research-pprs", vector_dim=768)
         qdrantvdb.create_collection()
 
     except Exception as e:
         logger.error(f"failed to initialize qdrant vector db collection: {e}")
         raise
     
-    chunker = MarkdownChunking(embeddings=hf_embed, chunker="heading")
+    chunker = MarkdownChunking(embed_model=hf_embed, chunker="heading")
 
     failed_files = []
     for i, md_file in enumerate(md_files, start=1):
@@ -86,7 +86,7 @@ def ingest_markdown_to_qdrant(input_path: Path):
             qdrantvdb.upload(result)
 
         except Exception as e:
-            logger.error(f"Failed processing: {md_file.name}")
+            logger.error(f"Failed processing: {md_file.name}: {e}")
             failed_files.append(md_file.name)
             continue
     

@@ -2,6 +2,10 @@ from langchain_experimental.text_splitter import SemanticChunker
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_core.documents import Document
 import uuid
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class MarkdownChunking:
@@ -25,13 +29,14 @@ class MarkdownChunking:
             self.chunker = MarkdownHeaderTextSplitter(
                 headers_to_split_on=[
                     ("#", "Header 1"),
-                    ("#", "Header 2"),
-                    ("#", "Header 3")
+                    ("##", "Header 2"),
+                    ("###", "Header 3")
                 ],
             )
     
         else:
             raise ValueError(f"Unknown chunker {self.chunker_type}, use 'semantic' or 'heading" )
+        logger.info(f"Chunker initialized: {self.chunker_type}")
 
         
     def create_chunks(
@@ -45,7 +50,7 @@ class MarkdownChunking:
             raw_chunks = self.chunker.create_documents([markdown_text])
             chunks = self._merge_chunks(raw_chunks)
         else:
-            chunks = self.chunker_type.create_documents([markdown_text])
+            chunks = self.chunker.split_text(markdown_text)
 
         for idx, chunk in enumerate(chunks):
             chunk.metadata.update({
