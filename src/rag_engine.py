@@ -1,6 +1,8 @@
 from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
-from config import CONFIG
+from src.config import CONFIG
+from typing import Optional
+import os
 
 class RAG:
     def __init__(self, retriever, llm_name: str = "gpt-4-turbo", provider: str = "OPENAI", top_k: int = 3):
@@ -26,7 +28,7 @@ class RAG:
                 model=self.llm_name or "llama-3.1-8b-instant",
                 temperature=0.1,
                 max_tokens=1024,
-                groq_api_key=CONFIG.GROQ_API_KEY
+                groq_api_key=os.getenv("GROQ_API_KEY")
             )
             return llm
 
@@ -58,23 +60,33 @@ class RAG:
     Answer:"""
 
 
-    def generate_context(self, query):
+    def generate_context(self, query, top_k: Optional[int] = None):
         contexts = []
-        results, latency = self.retriever.search(query, self.top_k)
+
+        results, latency = self.retriever.search(query, top_k=top_k or self.top_k)
 
         for point in results:
             contexts.append(
-                f"[Source: {point.payload.get('source')} | Chunk: {point.payload.get('chunk_index')}]\n"
+                f"[Source: {point.payload.get('file_name')} | Chunk: {point.payload.get('chunk_index')}]\n"
                 f"[Context: {point.payload.get('text')}]"
             )
 
-        return "\n\n --- \n\n".join(contexts)
+        formatted_contexts = "\n\n --- \n\n".join(contexts)
+        return formatted_contexts, results
             
-    def generate_response(self, query: str):
-        contexts = self.generate_context(query=query)
+    def generate_response(self, query: str, top_k: Optional[int] = None):
+        contexts, results = self.generate_context(query=query, top_k=top_k)
         prompt = self.prompt_template_str.format(context=contexts, query=query)
         response = self.llm.invoke(prompt)
-        return response.content
-
+        return {
+            "answer": response.content,
+            "sources": [
+                {
+                    "paper": point.payload.get('file_name'),
+                    "chunk_index": point.payload.get('chunk_index')
+                }
+                for point in results
+            ]
+        }
 
 
