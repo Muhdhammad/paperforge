@@ -5,12 +5,13 @@ from typing import Optional
 import os
 
 class RAG:
-    def __init__(self, retriever, llm_name: str = "gpt-4-turbo", provider: str = "OPENAI", top_k: int = 3):
+    def __init__(self, retriever, llm_name: str = "gpt-4-turbo", provider: str = "OPENAI", top_k: int = 3, reranking: bool = False):
         self.retriever = retriever
         self.top_k = top_k
         self.llm_name = llm_name
         self.provider = provider
         self.llm = self._setup_llm()
+        self.reranking = reranking
         self.prompt_template_str = self.prompt_template()
 
     def _setup_llm(self):
@@ -42,12 +43,11 @@ class RAG:
 
     Provide a clear, accurate answer following these rules:
 
-    1. ANSWER CONTENT:
+    1. ANSWER GUIDELINES:
     - Use only the information from the context above
     - Be specific: cite numbers, percentages, method names, or results when relevant
     - Use technical language appropriately for a research audience
     - Do not rephrase unless necessary; prefer wording from the context.
-
 
     2. IF INFORMATION IS MISSING:
     - State clearly: "The provided context does not contain information about [topic]."
@@ -62,8 +62,11 @@ class RAG:
 
     def generate_context(self, query, top_k: Optional[int] = None):
         contexts = []
+        k = top_k or self.top_k
 
-        results, latency = self.retriever.search(query, top_k=top_k or self.top_k)
+        results, latency = self.retriever.search(query, top_k=k)
+        if self.reranking:
+            results = self.retriever.rerank_with_jina(query=query, results=results, top_n=k)
 
         for point in results:
             contexts.append(
