@@ -11,3 +11,5 @@ einops
 huggingface_hub
 datasets
 ragas
+fastapi
+uvicorn
