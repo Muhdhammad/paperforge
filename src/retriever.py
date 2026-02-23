@@ -48,7 +48,7 @@ class Retriever:
       raise RetrievalError(f"Dense retrieval failed for query: {query}: {e}")
     
 
-  def rerank_with_jina(self, query: str, results: list) -> list:  # results are the retrived docs
+  def rerank_with_jina(self, query: str, results: list, top_n: int = 3) -> list:  # results are the retrived docs
 
     if not results:
       raise ValueError("No retrived docs found")
@@ -62,11 +62,11 @@ class Retriever:
       data = {
         "model": "jina-reranker-v3",
         "query": query,
-        "top_n": 3,
+        "top_n": top_n,
         "documents": [point.payload["text"] for point in results]
       }
 
-      response = requests.post(url=url, headers=headers, json=data)
+      response = requests.post(url=url, headers=headers, json=data, timeout=30)
       
       if response.status_code != 200:
         raise ValueError(f"Jina reranking failed {response.text}")
@@ -74,11 +74,13 @@ class Retriever:
       reranked = response.json()["results"]
 
       reranked_result = []
-
+      # Return ScoredPoint in reranked order
       for r in reranked:
         idx = r["index"]
+        point = results[idx]
         relevance_score = r["relevance_score"]
-        reranked_result.append({"score":relevance_score, "result": results[idx]})
+        point.payload["jina_score"] = relevance_score # Add relevance score in point payload
+        reranked_result.append(point)
 
       return reranked_result
     
