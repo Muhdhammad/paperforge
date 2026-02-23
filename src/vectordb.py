@@ -1,7 +1,7 @@
 from qdrant_client import QdrantClient, models
-from embedding import Embedding
+from src.embedding import Embedding
 from tqdm import tqdm
-from utils import get_uuid
+from src.utils import get_uuid
 
 class CollectionAlreadyExists(Exception):
     pass
