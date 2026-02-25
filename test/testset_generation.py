@@ -50,7 +50,7 @@ def generate_qa(md_file: Path, model: str = "llama-3.3-70b-versatile"):
     markdown_text = md_file.read_text(encoding="utf-8")
 
     try:
-        response = client.text_generation(
+        response = client.chat.completions.create(
             model=model,
             messages=[
                 {"role": "user", "content": PROMPT.format(markdown_text=markdown_text)}
@@ -66,6 +66,9 @@ def generate_qa(md_file: Path, model: str = "llama-3.3-70b-versatile"):
         logger.error(f"Error generating QA for {md_file.name}: {e}")
         raise
 
-md_file = Path("test/test-papers/Attention_Is_All_You_Need.md")
-generate_qa(md_file=md_file, model="llama-3.3-70b-versatile")
+md_file = Path("test/test-papers/YOLOv3_An_Incremental_Improvement.md")
+qa_json = generate_qa(md_file=md_file, model="llama-3.3-70b-versatile")
+logger.info(qa_json)
+
+print(json.dumps(qa_json, indent=2))
 
