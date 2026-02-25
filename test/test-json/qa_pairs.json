@@ -1,0 +1,105 @@
+[
+  {
+    "paper": "Attention Is All You Need",
+    "qa_pairs": [
+      {
+        "type": "factual",
+        "question": "What BLEU score did the Transformer achieve on the WMT 2014 English-to-German translation task?",
+        "answer": "The Transformer achieved a BLEU score of 28.4 on the WMT 2014 English-to-German translation task."
+      },
+      {
+        "type": "conceptual",
+        "question": "What is the purpose of multi-head attention in the Transformer architecture?",
+        "answer": "Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions, preventing averaged representations from inhibiting diverse attention patterns."
+      },
+      {
+        "type": "results/limitations",
+        "question": "What limitation does the paper mention regarding the Transformer's handling of very long sequences?",
+        "answer": "For very long sequences, self-attention could be restricted to a neighborhood of size r, increasing the maximum path length to O(n/r) and requiring future investigation."
+      },
+      {
+        "type": "multi_context",
+        "question": "How did the sinusoidal positional encodings compare to learned embeddings in translation performance, and what advantage did the sinusoidal version offer?",
+        "answer": "Both versions produced nearly identical BLEU scores (Table 3 row E), but sinusoidal encodings were chosen for their potential to extrapolate to longer sequence lengths than encountered during training."
+      }
+    ]
+  },
+
+  {
+    "paper": "U-Net: Convolutional Networks for Biomedical Image Segmentation",
+    "qa_pairs": [
+      {
+        "type": "factual",
+        "question": "What is the size of the input images used for training the network in the EM segmentation challenge?",
+        "answer": "512x512 pixels"
+      },
+      {
+        "type": "conceptual",
+        "question": "What is the main idea behind the U-Net architecture?",
+        "answer": "The main idea is to supplement a usual contracting network by successive layers, where pooling operators are replaced by upsampling operators, to enable precise localization and capture context."
+      },
+      {
+        "type": "results/limitations",
+        "question": "What is the warping error achieved by the U-Net on the EM segmentation challenge?",
+        "answer": "0.0003529, which is significantly better than the previous best result of 0.000420 by Ciresan et al."
+      },
+      {
+        "type": "multi_context",
+        "question": "How does the U-Net architecture handle the separation of touching objects of the same class, and what is the role of data augmentation in this context?",
+        "answer": "The U-Net uses a weighted loss function to give more importance to the separation borders between touching cells, and data augmentation with elastic deformations helps the network learn invariance to such deformations and robustness to variations in the data."
+      }
+    ]
+  },
+
+  {
+    "paper": "Graph Attention Networks",
+    "qa_pairs": [
+      {
+        "type": "factual",
+        "question": "What is the number of features in each node for the Cora dataset?",
+        "answer": "1433"
+      },
+      {
+        "type": "conceptual",
+        "question": "What is the main idea behind the graph attentional layer?",
+        "answer": "The main idea is to compute the hidden representations of each node in the graph by attending over its neighbors, following a self-attention strategy."
+      },
+      {
+        "type": "results/limitations",
+        "question": "What is the performance of the GAT model on the PPI dataset?",
+        "answer": "The GAT model achieves a micro-averaged F1 score of 0.973 \u00b1 0.002 on the PPI dataset."
+      },
+      {
+        "type": "multi_context",
+        "question": "How does the GAT model handle inductive learning, and what is the benefit of using attention mechanisms in this context?",
+        "answer": "The GAT model handles inductive learning by applying a three-layer GAT model, and the attention mechanism allows for assigning different weights to different neighbors, which is beneficial for inductive learning as it can handle completely unseen graphs during training."
+      }
+    ]
+  },
+
+  {
+    "paper": "YOLOv3 An Incremental Improvement",
+    "qa_pairs": [
+      {
+        "type": "factual",
+        "question": "What is the size of the input image used for training the Darknet-53 network?",
+        "answer": "256 \u00d7 256"
+      },
+      {
+        "type": "conceptual",
+        "question": "What is the purpose of using logistic regression for objectness score prediction in YOLOv3?",
+        "answer": "To predict the probability that a bounding box prior overlaps a ground truth object by more than any other bounding box prior."
+      },
+      {
+        "type": "results/limitations",
+        "question": "How does YOLOv3 perform on the COCO average AP metric compared to other models?",
+        "answer": "YOLOv3 is not as great on the COCO average AP metric, but it is very good on the old detection metric of .5 IOU."
+      },
+      {
+        "type": "multi_context",
+        "question": "How does the use of multi-scale predictions in YOLOv3 affect its performance on small objects, and what is the significance of this improvement?",
+        "answer": "The use of multi-scale predictions in YOLOv3 improves its performance on small objects, with relatively high AP S performance, which is a significant improvement over previous versions of YOLO."
+      }
+    ]
+  }
+]
