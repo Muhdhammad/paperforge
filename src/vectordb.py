@@ -101,7 +101,7 @@ class QdrantVDB:
 
 
 if __name__ == "__main__":
-    qdrantvdb = QdrantVDB(collection_name="research-papers")
+    qdrantvdb = QdrantVDB(collection_name="research-pprs")
     qdrantvdb.check_health()
 
         

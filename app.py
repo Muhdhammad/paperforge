@@ -2,8 +2,9 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi import status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 from contextlib import asynccontextmanager
+from typing import Optional
+import uvicorn
 import logging
 
 from src.rag_engine import RAG
@@ -47,7 +48,8 @@ app.add_middleware(
 
 class QueryRequest(BaseModel):
     query: str
-    top_k: int = 3 
+    top_k: Optional[int] = 3
+    paper_filter: Optional[str] = None
 
 class QueryResponse(BaseModel):
     answer: str
@@ -61,7 +63,7 @@ def health():
 @app.post('/query', response_model=QueryResponse)
 def user_query(request: QueryRequest):
     try:
-        result = app.state.rag.generate_response(query=request.query, top_k=request.top_k)
+        result = app.state.rag.generate_response(query=request.query, top_k=request.top_k, paper_filter=request.paper_filter)
         return result
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal error: {e}")

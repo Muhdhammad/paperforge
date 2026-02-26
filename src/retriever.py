@@ -1,4 +1,5 @@
 from qdrant_client import models
+from typing import Optional
 import time
 import os
 import requests
@@ -21,16 +22,28 @@ class Retriever:
     self.vectordb = vectordb
     self.embed_text = embed_text
 
-  def search(self, query: str, top_k: int = 5):
+  def search(self, query: str, top_k: int = 5, paper_filter: Optional[str] = None):
 
     try:
       embed_query = self.embed_text(query)
+
+      search_filter = None
+      if paper_filter: 
+        search_filter = models.Filter(
+          must=[
+            models.FieldCondition(
+              key="file_name",
+              match=models.MatchValue(value=paper_filter)
+            )
+          ]
+        )
 
       start_time = time.time()
       results = self.vectordb.client.query_points(
           collection_name=self.vectordb.collection_name,
           query=embed_query,
           limit=top_k,
+          query_filter=search_filter,
           search_params=models.SearchParams(
               quantization=models.QuantizationSearchParams(
                   ignore=True,

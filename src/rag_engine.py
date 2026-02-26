@@ -60,11 +60,11 @@ class RAG:
     Answer:"""
 
 
-    def generate_context(self, query, top_k: Optional[int] = None):
+    def generate_context(self, query, top_k: Optional[int] = None, paper_filter: Optional[str] = None):
         contexts = []
         k = top_k or self.top_k
 
-        results, latency = self.retriever.search(query, top_k=k)
+        results, latency = self.retriever.search(query, top_k=k, paper_filter=paper_filter)
         if self.reranking:
             results = self.retriever.rerank_with_jina(query=query, results=results, top_n=k)
 
@@ -77,8 +77,8 @@ class RAG:
         formatted_contexts = "\n\n --- \n\n".join(contexts)
         return formatted_contexts, results
             
-    def generate_response(self, query: str, top_k: Optional[int] = None):
-        contexts, results = self.generate_context(query=query, top_k=top_k)
+    def generate_response(self, query: str, top_k: Optional[int] = None, paper_filter: Optional[str] = None):
+        contexts, results = self.generate_context(query=query, top_k=top_k, paper_filter=paper_filter)
         prompt = self.prompt_template_str.format(context=contexts, query=query)
         response = self.llm.invoke(prompt)
         return {
