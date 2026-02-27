@@ -1,6 +1,11 @@
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document
+from qdrant_client.models import SparseVector
+from fastembed import SparseTextEmbedding
 from tqdm import tqdm
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Embedding:
 
@@ -33,7 +38,7 @@ class Embedding:
     # def get_vector_dim(self):
         # return self.model.client.get_sentence_embedding_dimension()
     
-    def embed_text(self, query: str):
+    def embed_text(self, query: str) -> list:
         return self.model.embed_query(query)
     
     @staticmethod
@@ -41,22 +46,45 @@ class Embedding:
         for i in range(0, len(lst), batch_size):
             yield lst[i: i + batch_size]
 
-    def batch_embedding(self, docs: list[Document]):
+    def embed_batch(self, texts: list[str]) -> list:
 
-        data = []
-        total_batches = (len(docs) + self.batch_size - 1) // self.batch_size
+        embeddings = []
+        total_batches = (len(texts) + self.batch_size - 1) // self.batch_size
 
-        for batch in tqdm(self.batch_iterate(docs, self.batch_size), total = total_batches, desc=f"Embedding {total_batches} batches"):
-            contexts = [doc.page_content for doc in batch]
-            vector_embeds = self.model.embed_documents(contexts)
+        for batch in tqdm(self.batch_iterate(texts, self.batch_size), total = total_batches, desc=f"Embedding {total_batches} batches"):
 
-            for doc, vector_embed in zip(batch, vector_embeds):
-                data.append({
-                    "vector": vector_embed,
-                    "payload": {**doc.metadata, "text": doc.page_content}
-                })
+            batch_embeddings = self.model.embed_documents(batch)
+            embeddings.extend(batch_embeddings)
 
-        return data
+        return embeddings
+    
+class SparseEmbedding:
+
+    def __init__(self, model_name: str = "Qdrant/bm42-all-minilm-l6-v2-attentions"):
+        self.model_name = model_name
+        self.model = SparseTextEmbedding(model_name=self.model_name)
+        logger.info(f"Sparse embedding model loaded")
+
+    def embed_text(self, text: str) -> SparseVector:
+        embeddings = next(self.model.embed([text])) # model.embed returns generator
+        
+        return SparseVector(
+            indices=embeddings.indices.tolist(),
+            values=embeddings.values.tolist()
+        )
+    
+    def embed_batch(self, text: list[str]) -> list[SparseVector]:
+        embeddings = list(self.model.embed(text))
+
+        return [
+            SparseVector(
+                indices=emb.indices.tolist(),
+                values=emb.values.tolist()
+            )
+            for emb in embeddings
+        ]
+
+
 
 if __name__ == "__main__":
 
@@ -73,9 +101,12 @@ if __name__ == "__main__":
 
     ]
 
-    embed = Embedding(model_name="sentence-transformers/all-MiniLM-L6-v2", batch_size=2)
+    texts = [doc.page_content for doc in test_chunks]
+    print(texts)
 
-    result = embed.batch_embedding(docs=test_chunks)
+    embed = Embedding(model_name="nomic-ai/nomic-embed-text-v1.5", batch_size=2)
+
+    result = embed.embed_batch(texts=texts)
 
     for i in result:
         print(i)
