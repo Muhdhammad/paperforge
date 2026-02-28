@@ -44,7 +44,7 @@ class QdrantVDB:
                     )
                 },
                 sparse_vectors_config={
-                    self.sparse_vector_name: models.SparseIndexParams(
+                    self.sparse_vector_name: models.SparseVectorParams(
                         index=models.SparseIndexParams()
                     )
                 },
@@ -69,7 +69,10 @@ class QdrantVDB:
 
                 points = [models.PointStruct(  # Qdrant expects a list of points
                     id=get_uuid(),
-                    vector=doc["vector"],
+                    vector={
+                        self.dense_vector_name: doc["dense_vector"],
+                        self.sparse_vector_name: doc["sparse_vector"]
+                    },
                     payload=doc["payload"]
                 ) for doc in batch
                 ]
