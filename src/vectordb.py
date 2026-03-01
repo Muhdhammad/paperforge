@@ -1,7 +1,6 @@
 from qdrant_client import QdrantClient, models
-from src.embedding import Embedding
+from src.utils import get_uuid, batch_iterate
 from tqdm import tqdm
-from src.utils import get_uuid
 import logging
 
 logger = logging.getLogger(__name__)
@@ -63,7 +62,7 @@ class QdrantVDB:
             raise ValueError("No documents found for upload")
         
         try:
-            for batch in tqdm(Embedding.batch_iterate(embed_docs, batch_size),
+            for batch in tqdm(batch_iterate(embed_docs, batch_size),
                               total=(len(embed_docs) + batch_size - 1) // batch_size,
                               desc="Uploading batches to Qdrant"):
 
@@ -86,6 +85,7 @@ class QdrantVDB:
             raise UploadError(f"Failed to upload documents to Qdrant") from e
         
     def check_health(self):
+        """Check for broken points without payload"""
 
         if not self.client.collection_exists(collection_name=self.collection_name):
             raise CollectionDoesntExist(f"No collection exists {self.collection_name}")
@@ -117,7 +117,7 @@ class QdrantVDB:
 
 
 if __name__ == "__main__":
-    qdrantvdb = QdrantVDB(collection_name="research-pprs")
+    qdrantvdb = QdrantVDB(collection_name="research-papers-arxiv")
     qdrantvdb.check_health()
 
         

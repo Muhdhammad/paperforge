@@ -1,24 +1,23 @@
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_core.documents import Document
-import uuid
 import logging
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 class MarkdownChunking:
     def __init__(
         self,
-        embed_model,
-        chunker: str = "semantic",
+        chunker: str = "heading",
+        embed_model = None,
         breakpoint_threshold: int = 85,
         min_chunk_size: int = 50,
     ):
         self.chunker_type = chunker
         self.min_chunk_size = min_chunk_size
         if self.chunker_type == "semantic":
+            if embed_model is None:
+                raise ValueError("embed_model required for semantic chunking")
             self.chunker = SemanticChunker(
                 embeddings=embed_model,
                 breakpoint_threshold_type="percentile",
@@ -35,7 +34,7 @@ class MarkdownChunking:
             )
     
         else:
-            raise ValueError(f"Unknown chunker {self.chunker_type}, use 'semantic' or 'heading" )
+            raise ValueError(f"Unknown chunker {self.chunker_type}, use 'semantic' or 'heading'" )
         logger.info(f"Chunker initialized: {self.chunker_type}")
 
         
@@ -45,6 +44,10 @@ class MarkdownChunking:
         doc_id: str,
         file_name: str,
     ) -> list[Document]:
+        
+        if not markdown_text:
+            logger.warning(f"Empty markdown text for {file_name}")
+            return []
         
         if self.chunker_type == "semantic":
             raw_chunks = self.chunker.create_documents([markdown_text])
@@ -64,7 +67,7 @@ class MarkdownChunking:
         return chunks
 
     def _merge_chunks(self, chunks: list[Document]) -> list[Document]:
-        
+        "Merge semantic chunks that are < min_chunk_size"
         if not chunks:
             return []
 
@@ -89,5 +92,13 @@ class MarkdownChunking:
                 merged_chunks.append(Document(page_content=buffer))
 
         return merged_chunks
+
+
+
+
+
+
+
+
 
 

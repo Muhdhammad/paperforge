@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None
     OPENROUTER_API_KEY: Optional[str] = None
+    JINA_API: Optional[str] = None
 
     model_config = SettingsConfigDict(env_file=Path(__file__).parent.parent / ".env", extra="ignore")
 

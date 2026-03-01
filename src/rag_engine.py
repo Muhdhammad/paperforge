@@ -2,14 +2,17 @@ from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
 from src.config import CONFIG
 from typing import Optional
-import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class RAG:
-    def __init__(self, retriever, llm_name: str = "gpt-4-turbo", provider: str = "OPENAI", top_k: int = 3, reranking: bool = False):
+    def __init__(self, retriever, llm_name: str = "gpt-4-turbo", provider: str = "OPENAI", top_k: int = 3, use_hybrid_search: bool = True, reranking: bool = True):
         self.retriever = retriever
         self.top_k = top_k
         self.llm_name = llm_name
         self.provider = provider
+        self.use_hybrid_search = use_hybrid_search
         self.llm = self._setup_llm()
         self.reranking = reranking
         self.prompt_template_str = self.prompt_template()
@@ -29,7 +32,7 @@ class RAG:
                 model=self.llm_name or "llama-3.1-8b-instant",
                 temperature=0.1,
                 max_tokens=1024,
-                groq_api_key=os.getenv("GROQ_API_KEY")
+                groq_api_key=CONFIG.GROQ_API_KEY
             )
             return llm
 
@@ -64,9 +67,13 @@ class RAG:
         contexts = []
         k = top_k or self.top_k
 
-        results, latency = self.retriever.search(query, top_k=k, paper_filter=paper_filter)
-        if self.reranking:
-            results = self.retriever.rerank_with_jina(query=query, results=results, top_n=k)
+        results, latency = self.retriever.search(
+            query=query,
+            top_k=k,
+            paper_filter=paper_filter, 
+            use_hybrid_search=self.use_hybrid_search,
+            reranking=self.reranking
+        )
 
         for point in results:
             contexts.append(
@@ -78,18 +85,28 @@ class RAG:
         return formatted_contexts, results
             
     def generate_response(self, query: str, top_k: Optional[int] = None, paper_filter: Optional[str] = None):
-        contexts, results = self.generate_context(query=query, top_k=top_k, paper_filter=paper_filter)
-        prompt = self.prompt_template_str.format(context=contexts, query=query)
-        response = self.llm.invoke(prompt)
-        return {
-            "answer": response.content,
-            "sources": [
-                {
-                    "paper": point.payload.get('file_name'),
-                    "chunk_index": point.payload.get('chunk_index')
-                }
-                for point in results
-            ]
-        }
+        try:
+            contexts, results = self.generate_context(query=query, top_k=top_k, paper_filter=paper_filter)
 
+            if not results:
+                return {
+                    "answer": "No relevant information found in the database.",
+                    "sources": []
+                }
+            
+            prompt = self.prompt_template_str.format(context=contexts, query=query)
+            response = self.llm.invoke(prompt)
+            return {
+                "answer": response.content,
+                "sources": [
+                    {
+                        "paper": point.payload.get('file_name'),
+                        "chunk_index": point.payload.get('chunk_index')
+                    }
+                    for point in results
+                ]
+            }
+        except Exception as e:
+            logger.error(f"Generation failed: {e}")
+            raise
 

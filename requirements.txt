@@ -13,3 +13,4 @@ datasets
 ragas
 fastapi
 uvicorn
+fastembed

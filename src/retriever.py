@@ -1,7 +1,9 @@
 from qdrant_client import models
 from typing import Optional
+from src.embedding import Embedding, SparseEmbedding
+from src.vectordb import QdrantVDB
+from src.config import CONFIG
 import time
-import os
 import requests
 import logging
 
@@ -16,17 +18,17 @@ class Retriever:
   def  __init__(
       self,
       vectordb,
-      embed_text
+      dense_embed,
+      sparse_embed,
   ):
-
     self.vectordb = vectordb
-    self.embed_text = embed_text
+    self.dense_embed = dense_embed
+    self.sparse_embed = sparse_embed
 
-  def search(self, query: str, top_k: int = 5, paper_filter: Optional[str] = None):
+  def search(self, query: str, top_k: int = 5, paper_filter: Optional[str] = None, use_hybrid_search: bool = False, reranking: bool = False):
 
     try:
-      embed_query = self.embed_text(query)
-
+      start_time = time.time()
       search_filter = None
       if paper_filter: 
         search_filter = models.Filter(
@@ -38,30 +40,67 @@ class Retriever:
           ]
         )
 
-      start_time = time.time()
-      results = self.vectordb.client.query_points(
+      if use_hybrid_search:
+        # dense and sparse query vector
+        dense_vector = self.dense_embed.embed_text(query)
+        sparse_vector = self.sparse_embed.embed_text(query)
+
+        results = self.vectordb.client.query_points(
           collection_name=self.vectordb.collection_name,
-          query=embed_query,
+          prefetch=[
+            models.Prefetch(
+              query=dense_vector,
+              using=self.vectordb.dense_vector_name,
+              limit=top_k * 2
+            ),
+            models.Prefetch(
+              query=sparse_vector,
+              using=self.vectordb.sparse_vector_name,
+              limit=top_k * 2
+
+            )
+          ],
+          query = models.FusionQuery(fusion=models.Fusion.RRF),
           limit=top_k,
-          query_filter=search_filter,
-          search_params=models.SearchParams(
-              quantization=models.QuantizationSearchParams(
-                  ignore=True,
-                  rescore=True,
-                  oversampling=2.0
-              )
-          ),
-          timeout=1000,
-      ).points
+          query_filter=search_filter
+        ).points
+
+      else:
+        # dense vector search only
+        dense_vector = self.dense_embed.embed_text(query)
+
+        results = self.vectordb.client.query_points(
+            collection_name=self.vectordb.collection_name,
+            query=dense_vector,
+            using=self.vectordb.dense_vector_name,
+            limit=top_k,
+            query_filter=search_filter,
+            search_params=models.SearchParams(
+                quantization=models.QuantizationSearchParams(
+                    ignore=True,
+                    rescore=True,
+                    oversampling=2.0
+                )
+            ),
+            timeout=1000,
+        ).points
+
+      # 2nd stage reranking with Jina reranker v3
+      if reranking:
+        try:
+          results = self.rerank_with_jina(query=query, results=results, top_n=3)
+        except Exception as e:
+          logger.warning("Reranking failed: {e}. Falling back to original rankings")
+
 
       latency = time.time() - start_time
       return results, latency
 
     except Exception as e:
-      raise RetrievalError(f"Dense retrieval failed for query: {query}: {e}")
+      raise RetrievalError(f"Retrieval failed for query: {query}: {e}")
     
 
-  def rerank_with_jina(self, query: str, results: list, top_n: int = 3) -> list:  # results are the retrived docs
+  def rerank_with_jina(self, query: str, results: list, top_n: int = 3) -> list:  # results are the retrived points
 
     if not results:
       raise ValueError("No retrived docs found")
@@ -70,7 +109,7 @@ class Retriever:
       url="https://api.jina.ai/v1/rerank"
       headers={
         "Content-Type": "application/json",
-        "Authorization" : f"Bearer {os.getenv('JINA_API')}"
+        "Authorization" : f"Bearer {CONFIG.JINA_API}"
       }
       data = {
         "model": "jina-reranker-v3",
@@ -100,3 +139,14 @@ class Retriever:
     except Exception as e:
       logger.error(f"Jina reranking error: {e}")
       raise
+
+if __name__ == "__main__":
+
+  query="What BLEU score did the Transformer achieve on the WMT 2014 English-to-German translation task?"
+  dense_embed = Embedding()
+  sparse_embed = SparseEmbedding()
+  qdrantvdb = QdrantVDB(collection_name="research-papers-arxiv")
+  ret = Retriever(vectordb=qdrantvdb, dense_embed=dense_embed, sparse_embed=sparse_embed)
+  res, latency = ret.search(query=query, top_k=10, use_hybrid_search=True, reranking=True)
+  print(res)
+  print(latency)
