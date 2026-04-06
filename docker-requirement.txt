@@ -1,0 +1,12 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+qdrant_client==1.14.2
+langchain-huggingface
+langchain_openai
+langchain_groq
+sentence-transformers
+fastembed
+fastapi
+uvicorn
+pydantic_settings
+einops
+
