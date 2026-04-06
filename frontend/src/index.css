@@ -1,0 +1,51 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: #0a0a0a;
+}
+
+body {
+  min-width: 320px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: transparent;
+}
+
+.nav-btn:hover {
+  background: none !important;
+  border-color: transparent !important;
+}
+
+.nav-btn:focus,
+.nav-btn:focus-visible {
+  outline: none !important;
+}
+
+.bubble-content p:last-child {
+  margin: 0;
+}
+.bubble-content ul, .bubble-content ol {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.bubble-content p {
+  margin: 0 0 4px 0;
+}
+
+.messages::-webkit-scrollbar {
+  display: none;
+}
