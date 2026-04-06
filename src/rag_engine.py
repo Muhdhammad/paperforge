@@ -36,9 +36,30 @@ class RAG:
             )
             return llm
 
+    def rewrite_query(self, query: str, chat_history: list):
+        """Rewrite follow-up query as a single query using chat_history for retrieval"""
+
+        try:
+            history = "\n".join([f"{msg['role']}: {msg['content']}" for msg in chat_history])
+            prompt = f"""
+            Given this conversation history:
+            {history}
+            Rewrite this follow-up question as a standalone query:
+            {query}
+            Return only the rewritten query nothing else
+            """
+            response = self.llm.invoke(prompt)
+            return response.content.strip()
+        except Exception as e:
+            logger.error(f"Error rewriting query: {e}")
+            raise
+
     def prompt_template(self):
         return """You are analyzing a research paper to answer specific questions.
 
+    Chat History:
+    {chat_history}    
+    
     Paper Context:
     {context}
 
@@ -47,7 +68,8 @@ class RAG:
     Provide a clear, accurate answer following these rules:
 
     1. ANSWER GUIDELINES:
-    - Use only the information from the context above
+    - Use only the information from the context and chat history above
+    - If the question is conversational, answer from chat history directly without needing context
     - Be specific: cite numbers, percentages, method names, or results when relevant
     - Use technical language appropriately for a research audience
     - Do not rephrase unless necessary; prefer wording from the context.
@@ -59,11 +81,14 @@ class RAG:
     3. FORMAT:
     - Keep answers concise (2-4 sentences for simple questions, more for complex ones)
     - Use bullet points for lists or multiple components
-
+    - ALWAYS format ALL mathematical expressions, symbols and formulas using LaTeX
+   
     Answer:"""
 
 
     def generate_context(self, query, top_k: Optional[int] = None, paper_filter: Optional[str] = None):
+        """Retrieve relevant chunks from qdrant and format them in a single string"""
+        
         contexts = []
         k = top_k or self.top_k
 
@@ -84,17 +109,26 @@ class RAG:
         formatted_contexts = "\n\n --- \n\n".join(contexts)
         return formatted_contexts, results
             
-    def generate_response(self, query: str, top_k: Optional[int] = None, paper_filter: Optional[str] = None):
+    def generate_response(self, query: str, top_k: Optional[int] = None, paper_filter: Optional[str] = None, chat_history: Optional[list] = None):
         try:
-            contexts, results = self.generate_context(query=query, top_k=top_k, paper_filter=paper_filter)
+            if chat_history:
+                search_query = self.rewrite_query(query=query, chat_history=chat_history)
+                logger.info(f"Rewritten query: {search_query}")
+                history = "\n".join([f"{msg['role']}: {msg['content']}" for msg in chat_history])
+            else:
+                search_query = query
+                history = "No previous conversation"
+
+
+            contexts, results = self.generate_context(query=search_query, top_k=top_k, paper_filter=paper_filter)
 
             if not results:
                 return {
                     "answer": "No relevant information found in the database.",
                     "sources": []
                 }
-            
-            prompt = self.prompt_template_str.format(context=contexts, query=query)
+                        
+            prompt = self.prompt_template_str.format(context=contexts, query=query, chat_history=history)
             response = self.llm.invoke(prompt)
             return {
                 "answer": response.content,

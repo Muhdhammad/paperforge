@@ -18,19 +18,20 @@ class UploadError(Exception):
     pass
 
 class QdrantVDB:
-    def __init__(self, collection_name: str, vector_dim: int = 768, dense_vector_name: str = "dense", sparse_vector_name: str = "sparse"):
+    def __init__(self, collection_name: str, vector_dim: int = 768, dense_vector_name: str = "dense", sparse_vector_name: str = "sparse", url: str = "http://localhost:6333",):
         self.collection_name = collection_name
         self.vector_dim = vector_dim
         self.dense_vector_name = dense_vector_name
         self.sparse_vector_name = sparse_vector_name
         self.client = QdrantClient(
-            url="http://localhost:6333",
+            url=url,
             prefer_grpc=True
         )
 
     def create_collection(self):
         if self.client.collection_exists(self.collection_name):
-            raise CollectionAlreadyExists("Collection already exists")
+            logger.warning(f"Collection {self.collection_name} already exists, skipping creation.")
+            return
 
         try:
             self.client.create_collection(
@@ -84,6 +85,52 @@ class QdrantVDB:
         except Exception as e:
             raise UploadError(f"Failed to upload documents to Qdrant") from e
         
+    def list_documents(self):
+        """List all the documents in knowledge base"""
+
+        seen_docs = set()
+        file_names = []
+        offset = None
+
+        try:
+            while True:
+                results, offset = self.client.scroll(collection_name=self.collection_name,
+                                                    limit=100,
+                                                    with_payload=True,
+                                                    with_vectors=False,
+                                                    offset=offset)
+                for point in results:
+                    file_name = point.payload.get("file_name")
+                    if file_name and file_name not in seen_docs:
+                        seen_docs.add(file_name)
+                        file_names.append(file_name)
+                
+                if offset is None:
+                    break
+            
+            return file_names
+
+        except Exception as e:
+            logger.error(f"Failed to list documents: {e}")
+            raise
+
+    def delete_document(self, file_name: str):
+        """Delete all the points for a specific file"""
+        
+        try:
+            self.client.delete(collection_name=self.collection_name,
+                            points_selector=models.Filter(
+                                must=[models.FieldCondition(
+                                    key="file_name",
+                                    match=models.MatchValue(value=file_name)
+                                )]
+                            )
+                            )
+            logger.info(f"All points deleted for {file_name}")
+        except Exception as e:
+            logger.error(f"Failed to delete points for {file_name}: {e}")
+            raise
+            
     def check_health(self):
         """Check for broken points without payload"""
 
