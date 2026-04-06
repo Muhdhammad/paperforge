@@ -1,6 +1,6 @@
 # <img src="frontend/src/assets/paperforge.png" alt="Logo" width="30" height="30"> PaperForge
 
-A multimodal **RAG (Retrieval-Augmented Generation)** system for research papers with hybrid (dense + sparse) retrieval, Jina reranking, and conversational querying with precise source attribution.
+A multimodal **RAG (Retrieval-Augmented Generation)** system for research papers with hybrid (dense + sparse) retrieval, Jina reranking, and conversational querying with source attribution.
 
 ## Key Features
 
@@ -357,7 +357,7 @@ paperforge/
 ├── src/                        # Backend core modules
 │   ├── chunking.py                # Markdown chunking (heading/semantic)
 │   ├── embedding.py               # Dense + Sparse embedding classes
-│   ├── preprocessing.py           # Dense + Sparse embedding classes
+│   ├── preprocessing.py           # Pdf processing pipeline with Docling, ocr and image summaries to mardown
 │   ├── rag_engine.py              # RAG orchestration & query reformulation
 │   ├── retriever.py               # Hybrid search + Jina reranking
 │   ├── ingestion.py               # Dense + Sparse embedding classes
